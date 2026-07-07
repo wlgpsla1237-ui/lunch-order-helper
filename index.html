@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>급식 발주 도우미</title>
+<style>
+  :root {
+    --yellow: #ffc800;
+    --yellow-dark: #f0b400;
+    --yellow-bg: #fff8e0;
+    --ink: #191f28;
+    --ink-sub: #4e5968;
+    --line: #e5e8eb;
+    --bg: #f2f4f6;
+    --card: #ffffff;
+    --danger: #d32f2f;
+    --blue: #3182f6;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.55;
+    padding-bottom: 80px;
+  }
+
+  header {
+    background: var(--card);
+    padding: 26px 20px 0;
+    border-bottom: 1px solid var(--line);
+    position: sticky; top: 0; z-index: 10;
+  }
+  .header-inner { max-width: 760px; margin: 0 auto; }
+  header h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; }
+  header h1 .dot { color: var(--yellow); }
+  header p { font-size: 14px; font-weight: 600; color: var(--ink-sub); margin-top: 2px; }
+
+  .tabs { display: flex; gap: 4px; margin-top: 16px; }
+  .tab-btn {
+    padding: 12px 18px 14px;
+    font-size: 15.5px; font-weight: 800;
+    border: none; background: none; color: var(--ink-sub);
+    border-bottom: 3px solid transparent;
+    cursor: pointer; letter-spacing: -0.3px;
+    white-space: nowrap;
+  }
+  .tab-btn.active { color: var(--ink); border-bottom-color: var(--yellow); }
+
+  main { max-width: 760px; margin: 0 auto; padding: 20px 16px; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .card {
+    background: var(--card);
+    border-radius: 20px;
+    padding: 22px 20px;
+    margin-bottom: 14px;
+    box-shadow: 0 1px 4px rgba(25,31,40,.05);
+  }
+  .card h2 { font-size: 17.5px; font-weight: 800; margin-bottom: 12px; letter-spacing: -0.4px; }
+  .card h2 .cnt { font-size: 14px; color: var(--ink-sub); font-weight: 700; }
+
+  label { display: block; font-size: 13.5px; font-weight: 700; color: var(--ink-sub); margin: 12px 0 5px; }
+  input, select, textarea {
+    width: 100%;
+    padding: 13px 14px;
+    font-size: 15.5px; font-weight: 600; color: var(--ink);
+    border: 1.5px solid var(--line); border-radius: 12px;
+    background: #fff; font-family: inherit;
+  }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--yellow); box-shadow: 0 0 0 3px var(--yellow-bg); }
+  textarea { resize: vertical; min-height: 130px; font-size: 13.5px; line-height: 1.6; }
+
+  .row { display: flex; gap: 8px; }
+  .row > * { flex: 1; }
+
+  .headcount-box {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--yellow-bg);
+    border-radius: 16px; padding: 14px 18px;
+  }
+  .headcount-box label { margin: 0; font-size: 15.5px; font-weight: 800; color: var(--ink); white-space: nowrap; }
+  .headcount-box input { font-size: 22px; font-weight: 800; text-align: center; border-color: transparent; }
+  .headcount-box input:focus { border-color: var(--yellow); }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .chip {
+    padding: 7px 14px; font-size: 13.5px; font-weight: 800;
+    border: none; border-radius: 999px;
+    background: var(--bg); color: var(--ink-sub); cursor: pointer;
+  }
+  .chip.active { background: var(--ink); color: #fff; }
+
+  .search-box { margin-bottom: 10px; }
+
+  .ing-row { display: grid; grid-template-columns: 1.6fr 1fr .8fr .9fr 40px; gap: 6px; margin-bottom: 6px; align-items: center; }
+  .ing-row input, .ing-row select { padding: 11px 10px; font-size: 14.5px; border-radius: 10px; }
+  .ing-head {
+    display: grid; grid-template-columns: 1.6fr 1fr .8fr .9fr 40px; gap: 6px;
+    font-size: 12.5px; font-weight: 800; color: var(--ink-sub); margin: 8px 0 4px; padding: 0 2px;
+  }
+
+  button { cursor: pointer; font-family: inherit; }
+  .btn {
+    width: 100%; padding: 15px;
+    font-size: 16px; font-weight: 800; letter-spacing: -0.3px;
+    border: none; border-radius: 14px; margin-top: 12px;
+  }
+  .btn-yellow { background: var(--yellow); color: var(--ink); }
+  .btn-yellow:hover { background: var(--yellow-dark); }
+  .btn-outline { background: var(--bg); color: var(--ink); }
+  .btn-outline:hover { background: var(--line); }
+  .btn-small {
+    padding: 9px 15px; font-size: 13.5px; font-weight: 800;
+    border-radius: 10px; border: none; background: var(--bg); color: var(--ink);
+  }
+  .btn-small:hover { background: var(--line); }
+  .btn-del {
+    width: 36px; height: 40px; border: none; border-radius: 10px;
+    background: #fdeeee; color: var(--danger); font-size: 16px; font-weight: 800;
+  }
+
+  .menu-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 14px 16px;
+    border: 1.5px solid var(--line); border-radius: 14px;
+    margin-bottom: 8px; background: #fff; cursor: default;
+  }
+  .menu-item.clickable { cursor: pointer; }
+  .menu-item.clickable:hover { border-color: #d0d5da; }
+  .menu-item.selected { border-color: var(--yellow); background: var(--yellow-bg); }
+  .menu-item .name { font-size: 15.5px; font-weight: 800; letter-spacing: -0.3px; }
+  .menu-item .sub { font-size: 13px; font-weight: 600; color: var(--ink-sub); margin-top: 2px; }
+  .menu-item .acts { display: flex; gap: 6px; flex-shrink: 0; margin-left: 10px; }
+  .badge {
+    display: inline-block; font-size: 11.5px; font-weight: 800;
+    padding: 2px 8px; border-radius: 6px;
+    background: var(--bg); color: var(--ink-sub);
+    margin-right: 6px; vertical-align: 2px;
+  }
+  @keyframes flash { 0% { background: var(--yellow-bg); border-color: var(--yellow); } 100% { background: #fff; border-color: var(--line); } }
+  .menu-item.flash { animation: flash 1.6s ease-out; }
+
+  table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+  th {
+    background: var(--bg); color: var(--ink-sub);
+    font-size: 13px; font-weight: 800;
+    padding: 11px 10px; text-align: left;
+  }
+  th:first-child { border-radius: 10px 0 0 10px; }
+  th:last-child { border-radius: 0 10px 10px 0; }
+  td { padding: 12px 10px; font-size: 15px; font-weight: 600; border-bottom: 1px solid var(--line); vertical-align: top; }
+  td .ing-name-cell { font-weight: 800; font-size: 15.5px; }
+  td .waste-tag { font-size: 12px; color: var(--ink-sub); font-weight: 700; }
+  td.amount { font-weight: 800; font-size: 15.5px; }
+  td.order-amount { font-weight: 800; font-size: 16.5px; background: var(--yellow-bg); border-radius: 8px; }
+  .note-line { font-size: 13px; font-weight: 700; color: var(--blue); margin-top: 3px; }
+  .note-btn {
+    border: none; background: none; font-size: 12.5px; font-weight: 800;
+    color: var(--ink-sub); text-decoration: underline; padding: 2px 0; margin-top: 2px;
+  }
+  .note-edit { display: flex; gap: 6px; margin-top: 6px; }
+  .note-edit input { padding: 9px 10px; font-size: 13.5px; border-radius: 8px; }
+  .note-edit button { flex-shrink: 0; }
+
+  .empty { text-align: center; padding: 30px 10px; font-size: 15px; font-weight: 700; color: var(--ink-sub); }
+  .hint { font-size: 13px; font-weight: 600; color: var(--ink-sub); margin-top: 8px; }
+  .example-box {
+    background: var(--bg); border-radius: 12px; padding: 12px 14px;
+    font-size: 12.5px; font-weight: 600; color: var(--ink-sub);
+    white-space: pre; overflow-x: auto; margin: 8px 0; line-height: 1.7;
+  }
+  .preview-box {
+    background: var(--yellow-bg); border-radius: 12px; padding: 14px 16px;
+    font-size: 14px; font-weight: 700; margin-top: 10px;
+  }
+  .preview-box ul { margin: 6px 0 0 18px; }
+  .preview-box .err { color: var(--danger); }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: var(--ink); color: #fff;
+    padding: 13px 24px; border-radius: 999px;
+    font-size: 15px; font-weight: 800;
+    opacity: 0; transition: opacity .25s; pointer-events: none;
+    z-index: 99; white-space: nowrap; box-shadow: 0 4px 14px rgba(0,0,0,.2);
+  }
+  .toast.show { opacity: 1; }
+
+  @media print {
+    header, .btn, .chips, .search-box, .no-print, .note-btn, .headcount-box input { display: none !important; }
+    body { background: #fff; padding: 0; }
+    .card { box-shadow: none; padding: 0; }
+    td.order-amount { background: #fff; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <h1>급식 발주 도우미<span class="dot">.</span></h1>
+    <p>메뉴를 등록하고, 인원만 입력하면 발주량이 나와요</p>
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="calc" onclick="showTab('calc')">발주 계산</button>
+      <button class="tab-btn" data-tab="recipe" onclick="showTab('recipe')">메뉴 등록</button>
+      <button class="tab-btn" data-tab="data" onclick="showTab('data')">데이터 관리</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+  <!-- ===== 발주 계산 ===== -->
+  <section id="panel-calc" class="panel active">
+    <div class="card">
+      <div class="headcount-box">
+        <label for="headcount">급식 인원</label>
+        <input type="number" id="headcount" min="1" placeholder="480" inputmode="numeric">
+        <label>명</label>
+      </div>
+      <p class="hint">결식·현장학습 인원을 뺀 실제 식수 인원을 입력하세요.</p>
+    </div>
+
+    <div class="card">
+      <h2>오늘 식단 메뉴 선택</h2>
+      <div class="chips" id="calc-chips"></div>
+      <input type="search" id="menu-search" class="search-box" placeholder="메뉴·재료 검색 (예: 제육, 돼지고기)">
+      <div id="menu-select-list"></div>
+    </div>
+
+    <div class="card">
+      <h2>발주 목록</h2>
+      <div id="result-area"><p class="empty">인원을 입력하고 메뉴를 선택하세요.</p></div>
+      <div class="row no-print" id="result-actions" style="display:none">
+        <button class="btn btn-outline" onclick="copyResult()">발주서 복사</button>
+        <button class="btn btn-yellow" onclick="window.print()">인쇄</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 메뉴 등록 ===== -->
+  <section id="panel-recipe" class="panel">
+    <div class="card">
+      <h2 id="form-title">새 메뉴 등록</h2>
+      <div class="row">
+        <div style="flex:2">
+          <label for="menu-name">메뉴 이름</label>
+          <input type="text" id="menu-name" placeholder="예: 제육볶음">
+        </div>
+        <div style="flex:1">
+          <label for="menu-cat">카테고리</label>
+          <select id="menu-cat"></select>
+        </div>
+      </div>
+
+      <label>재료 (1인분 기준)</label>
+      <div class="ing-head"><span>재료명</span><span>1인 기준량</span><span>단위</span><span>폐기율%</span><span></span></div>
+      <div id="ing-rows"></div>
+      <button class="btn-small" onclick="addIngRow()">＋ 재료 추가</button>
+      <p class="hint">재료명은 입력하면 기존에 쓰던 이름이 추천돼요. <b>같은 재료는 같은 이름</b>으로 써야 발주량이 합산됩니다.<br>폐기율: 껍질·꼭지 등 버리는 비율. 모르면 0으로 두세요.</p>
+
+      <button class="btn btn-yellow" id="save-btn" onclick="saveMenu()">메뉴 저장</button>
+      <button class="btn btn-outline" id="cancel-btn" style="display:none" onclick="resetForm()">수정 취소</button>
+    </div>
+
+    <div class="card">
+      <h2>등록된 메뉴 <span class="cnt" id="menu-count"></span></h2>
+      <div class="chips" id="manage-chips"></div>
+      <input type="search" id="manage-search" class="search-box" placeholder="메뉴·재료 검색">
+      <div id="menu-manage-list"></div>
+    </div>
+  </section>
+
+  <!-- ===== 데이터 관리 ===== -->
+  <section id="panel-data" class="panel">
+    <div class="card">
+      <h2>📋 엑셀로 한 번에 등록</h2>
+      <p class="hint" style="margin-top:0">엑셀에서 아래 순서로 표를 만들고, 범위를 복사(Ctrl+C)해서 그대로 붙여넣으세요.<br>같은 메뉴는 재료 수만큼 여러 줄로 씁니다. 이미 있는 메뉴 이름이면 새 내용으로 교체돼요.</p>
+      <div class="example-box">메뉴명	카테고리	재료명	1인량	단위	폐기율
+제육볶음	주찬	돼지고기(앞다리)	70	g	0
+제육볶음	주찬	양파	20	g	10
+미역국	국·탕	건미역	4	g	0</div>
+      <textarea id="bulk-input" placeholder="여기에 붙여넣으세요 (첫 줄 제목은 있어도 되고 없어도 돼요)"></textarea>
+      <button class="btn btn-outline" onclick="previewBulk()">미리보기</button>
+      <div id="bulk-preview"></div>
+      <button class="btn btn-yellow" id="bulk-apply-btn" style="display:none" onclick="applyBulk()">이대로 등록하기</button>
+    </div>
+
+    <div class="card">
+      <h2>💾 백업 · 복원</h2>
+      <p class="hint" style="margin-top:0">메뉴와 제품 메모는 <b>지금 쓰는 이 브라우저에만</b> 저장돼요.<br>컴퓨터를 바꾸거나 학교를 옮길 때는 ① 백업 파일을 내려받고 → ② 새 컴퓨터에서 불러오면 그대로 복원됩니다. 평소에도 가끔 백업해 두세요.</p>
+      <div class="row">
+        <button class="btn btn-yellow" onclick="exportData()">백업 파일 내려받기</button>
+        <button class="btn btn-outline" onclick="document.getElementById('import-file').click()">백업 불러오기</button>
+      </div>
+      <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(this)">
+    </div>
+
+    <div class="card">
+      <h2>🗑️ 전체 초기화</h2>
+      <p class="hint" style="margin-top:0">모든 메뉴와 제품 메모를 지웁니다. 지우기 전에 꼭 백업하세요.</p>
+      <button class="btn btn-outline" style="color:var(--danger)" onclick="wipeAll()">모든 데이터 삭제</button>
+    </div>
+  </section>
+
+</main>
+
+<datalist id="ing-datalist"></datalist>
+<div class="toast" id="toast"></div>
+
+<script>
+const STORE_KEY = 'lunchOrderCalc.menus.v1';
+const NOTES_KEY = 'lunchOrderCalc.notes.v1';
+const CATS = ['밥', '국·탕', '주찬', '부찬', '간식·후식', '기타'];
+
+let menus = [];
+let notes = {};          // { 재료명: '괜찮았던 제품 메모' }
+let editingId = null;
+let selectedIds = new Set();
+let calcCat = '전체';
+let manageCat = '전체';
+let editingNote = null;  // 지금 메모 편집 중인 재료명
+
+/* ---------- 저장/불러오기 ---------- */
+function load() {
+  try { menus = JSON.parse(localStorage.getItem(STORE_KEY)) || []; } catch { menus = []; }
+  try { notes = JSON.parse(localStorage.getItem(NOTES_KEY)) || {}; } catch { notes = {}; }
+  // 구버전 데이터 마이그레이션: 카테고리 없으면 '기타'
+  let migrated = false;
+  menus.forEach(m => { if (!m.category) { m.category = '기타'; migrated = true; } });
+  if (migrated) persist();
+}
+function persist() {
+  localStorage.setItem(STORE_KEY, JSON.stringify(menus));
+  localStorage.setItem(NOTES_KEY, JSON.stringify(notes));
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+function showTab(name) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  if (name === 'calc') renderMenuSelect();
+  if (name === 'recipe') renderMenuManage();
+}
+
+/* ---------- 공통 헬퍼 ---------- */
+function sortedMenus(query, cat) {
+  const q = (query || '').trim().toLowerCase();
+  return [...menus]
+    .filter(m => !cat || cat === '전체' || m.category === cat)
+    .filter(m => !q || m.name.toLowerCase().includes(q) || m.ings.some(i => i.name.toLowerCase().includes(q)))
+    .sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+}
+
+function renderChips(elId, current, onPick) {
+  const el = document.getElementById(elId);
+  el.innerHTML = ['전체', ...CATS].map(c =>
+    `<button class="chip ${current === c ? 'active' : ''}" onclick="${onPick}('${c}')">${c}</button>`).join('');
+}
+function pickCalcCat(c) { calcCat = c; renderMenuSelect(); }
+function pickManageCat(c) { manageCat = c; renderMenuManage(); }
+
+function refreshDatalist() {
+  const names = new Set();
+  menus.forEach(m => m.ings.forEach(i => names.add(i.name)));
+  Object.keys(notes).forEach(n => names.add(n));
+  document.getElementById('ing-datalist').innerHTML =
+    [...names].sort((a, b) => a.localeCompare(b, 'ko')).map(n => `<option value="${n}">`).join('');
+}
+
+function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); }
+
+/* ---------- 메뉴 등록 ---------- */
+function addIngRow(ing) {
+  const div = document.createElement('div');
+  div.className = 'ing-row';
+  div.innerHTML = `
+    <input type="text" class="ing-name" list="ing-datalist" placeholder="돼지고기" value="${ing ? esc(ing.name) : ''}">
+    <input type="number" class="ing-qty" placeholder="80" min="0" step="any" inputmode="decimal" value="${ing ? ing.qty : ''}">
+    <select class="ing-unit">
+      <option value="g">g</option><option value="ml">ml</option><option value="개">개</option>
+    </select>
+    <input type="number" class="ing-waste" placeholder="0" min="0" max="99" inputmode="numeric" value="${ing && ing.waste ? ing.waste : ''}">
+    <button class="btn-del" onclick="this.parentElement.remove()">✕</button>`;
+  if (ing) div.querySelector('.ing-unit').value = ing.unit;
+  document.getElementById('ing-rows').appendChild(div);
+}
+
+function readForm() {
+  const name = document.getElementById('menu-name').value.trim();
+  if (!name) { toast('메뉴 이름을 입력하세요'); return null; }
+  const category = document.getElementById('menu-cat').value;
+  const ings = [];
+  document.querySelectorAll('#ing-rows .ing-row').forEach(row => {
+    const iname = row.querySelector('.ing-name').value.trim();
+    const qty = parseFloat(row.querySelector('.ing-qty').value);
+    const unit = row.querySelector('.ing-unit').value;
+    const waste = parseFloat(row.querySelector('.ing-waste').value) || 0;
+    if (iname && qty > 0) ings.push({ name: iname, qty, unit, waste });
+  });
+  if (ings.length === 0) { toast('재료를 1개 이상 입력하세요'); return null; }
+  return { name, category, ings };
+}
+
+function saveMenu() {
+  const data = readForm();
+  if (!data) return;
+  let savedId;
+  if (editingId) {
+    const m = menus.find(m => m.id === editingId);
+    Object.assign(m, data);
+    savedId = editingId;
+    toast(`'${data.name}' 메뉴를 수정했어요`);
+  } else {
+    savedId = Date.now().toString(36);
+    menus.push({ id: savedId, ...data });
+    toast(`'${data.name}' 메뉴를 저장했어요`);
+  }
+  persist();
+  resetForm();
+  refreshDatalist();
+  // 검색·카테고리 필터에 가려 새 메뉴가 안 보이는 일이 없도록 초기화
+  document.getElementById('manage-search').value = '';
+  manageCat = '전체';
+  renderMenuManage();
+  // 가나다순이라 목록 중간에 들어갈 수 있으니 저장 위치로 스크롤 + 강조
+  const el = document.getElementById('mm-' + savedId);
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.add('flash');
+    setTimeout(() => el.classList.remove('flash'), 1700);
+  }
+}
+
+function resetForm() {
+  editingId = null;
+  document.getElementById('form-title').textContent = '새 메뉴 등록';
+  document.getElementById('save-btn').textContent = '메뉴 저장';
+  document.getElementById('cancel-btn').style.display = 'none';
+  document.getElementById('menu-name').value = '';
+  document.getElementById('menu-cat').value = '기타';
+  document.getElementById('ing-rows').innerHTML = '';
+  addIngRow();
+}
+
+function editMenu(id) {
+  const m = menus.find(m => m.id === id);
+  if (!m) return;
+  editingId = id;
+  document.getElementById('form-title').textContent = `메뉴 수정: ${m.name}`;
+  document.getElementById('save-btn').textContent = '수정 저장';
+  document.getElementById('cancel-btn').style.display = 'block';
+  document.getElementById('menu-name').value = m.name;
+  document.getElementById('menu-cat').value = m.category || '기타';
+  document.getElementById('ing-rows').innerHTML = '';
+  m.ings.forEach(addIngRow);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function deleteMenu(id) {
+  const m = menus.find(m => m.id === id);
+  if (!confirm(`'${m.name}' 메뉴를 삭제할까요?`)) return;
+  menus = menus.filter(m => m.id !== id);
+  selectedIds.delete(id);
+  persist();
+  renderMenuManage();
+  toast('삭제했어요');
+}
+
+function menuItemHTML(m, opts) {
+  const badge = `<span class="badge">${m.category || '기타'}</span>`;
+  if (opts.mode === 'manage') {
+    return `
+      <div class="menu-item" id="mm-${m.id}">
+        <div>
+          <div class="name">${badge}${esc(m.name)}</div>
+          <div class="sub">재료 ${m.ings.length}가지 · ${esc(m.ings.map(i => i.name).join(', '))}</div>
+        </div>
+        <div class="acts">
+          <button class="btn-small" onclick="editMenu('${m.id}')">수정</button>
+          <button class="btn-del" onclick="deleteMenu('${m.id}')">✕</button>
+        </div>
+      </div>`;
+  }
+  const sel = selectedIds.has(m.id);
+  return `
+    <div class="menu-item clickable ${sel ? 'selected' : ''}" onclick="toggleSelect('${m.id}')">
+      <div>
+        <div class="name">${sel ? '✅ ' : ''}${badge}${esc(m.name)}</div>
+        <div class="sub">${esc(m.ings.map(i => i.name).join(', '))}</div>
+      </div>
+    </div>`;
+}
+
+function renderMenuManage() {
+  renderChips('manage-chips', manageCat, 'pickManageCat');
+  const box = document.getElementById('menu-manage-list');
+  const countEl = document.getElementById('menu-count');
+  if (countEl) countEl.textContent = menus.length ? `(${menus.length}개)` : '';
+  if (menus.length === 0) {
+    box.innerHTML = '<p class="empty">아직 등록된 메뉴가 없어요.<br>위에서 직접 등록하거나, [데이터 관리]에서 엑셀로 한 번에 넣을 수 있어요.</p>';
+    return;
+  }
+  const list = sortedMenus(document.getElementById('manage-search')?.value, manageCat);
+  box.innerHTML = list.length
+    ? list.map(m => menuItemHTML(m, { mode: 'manage' })).join('')
+    : '<p class="empty">검색 결과가 없어요.</p>';
+}
+
+/* ---------- 발주 계산 ---------- */
+function renderMenuSelect() {
+  renderChips('calc-chips', calcCat, 'pickCalcCat');
+  const box = document.getElementById('menu-select-list');
+  if (menus.length === 0) {
+    box.innerHTML = '<p class="empty">등록된 메뉴가 없어요.<br>[메뉴 등록] 탭에서 먼저 등록해주세요.</p>';
+    return;
+  }
+  const q = document.getElementById('menu-search')?.value;
+  // 선택된 메뉴는 검색·카테고리와 무관하게 항상 맨 위에 고정
+  const picked = sortedMenus().filter(m => selectedIds.has(m.id));
+  const rest = sortedMenus(q, calcCat).filter(m => !selectedIds.has(m.id));
+  const list = [...picked, ...rest];
+  box.innerHTML = list.length
+    ? list.map(m => menuItemHTML(m, { mode: 'select' })).join('')
+    : '<p class="empty">검색 결과가 없어요.</p>';
+  calc();
+}
+
+function toggleSelect(id) {
+  selectedIds.has(id) ? selectedIds.delete(id) : selectedIds.add(id);
+  renderMenuSelect();
+}
+
+function fmt(qty, unit) {
+  if (unit === '개') return `${Math.ceil(qty)}개`;
+  if (qty >= 1000) return `${(qty / 1000).toFixed(qty % 1000 === 0 ? 0 : 1)}${unit === 'g' ? 'kg' : 'L'}`;
+  return `${Math.round(qty * 10) / 10}${unit}`;
+}
+
+function calc() {
+  const n = parseInt(document.getElementById('headcount').value);
+  const area = document.getElementById('result-area');
+  const actions = document.getElementById('result-actions');
+  if (!n || n < 1 || selectedIds.size === 0) {
+    area.innerHTML = '<p class="empty">인원을 입력하고 메뉴를 선택하세요.</p>';
+    actions.style.display = 'none';
+    return;
+  }
+  const map = new Map();
+  menus.filter(m => selectedIds.has(m.id)).forEach(m => {
+    m.ings.forEach(i => {
+      const key = `${i.name}|${i.unit}`;
+      const prev = map.get(key) || { name: i.name, unit: i.unit, qty: 0, waste: 0 };
+      prev.qty += i.qty;
+      prev.waste = Math.max(prev.waste, i.waste || 0);
+      map.set(key, prev);
+    });
+  });
+  const rows = [...map.values()].map(i => {
+    const net = i.qty * n;
+    const order = i.waste > 0 ? net / (1 - i.waste / 100) : net;
+    return { ...i, net, order };
+  }).sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+
+  const menuNames = menus.filter(m => selectedIds.has(m.id)).map(m => m.name).join(', ');
+  area.innerHTML = `
+    <p style="font-size:14px;font-weight:700;color:var(--ink-sub)">
+      ${new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })} ·
+      <b style="color:var(--ink)">${n}명</b> · ${esc(menuNames)}
+    </p>
+    <table>
+      <thead><tr><th>재료</th><th>순사용량</th><th>발주량 (폐기율 반영)</th></tr></thead>
+      <tbody>
+        ${rows.map(r => {
+          const note = notes[r.name];
+          const noteHtml = editingNote === r.name
+            ? `<div class="note-edit no-print">
+                 <input type="text" id="note-input" value="${note ? esc(note) : ''}" placeholder="예: 오뚜기, 하이포크 괜찮았음">
+                 <button class="btn-small" onclick="saveNote('${esc(r.name)}')">저장</button>
+                 <button class="btn-small" onclick="editingNote=null;calc()">취소</button>
+               </div>`
+            : `${note ? `<div class="note-line">📌 ${esc(note)}</div>` : ''}
+               <button class="note-btn no-print" onclick="editingNote='${esc(r.name)}';calc();document.getElementById('note-input')?.focus()">${note ? '메모 수정' : '+ 제품 메모'}</button>`;
+          return `
+          <tr>
+            <td>
+              <span class="ing-name-cell">${esc(r.name)}</span>
+              ${r.waste ? `<div class="waste-tag">폐기율 ${r.waste}%</div>` : ''}
+              ${noteHtml}
+            </td>
+            <td class="amount">${fmt(r.net, r.unit)}</td>
+            <td class="order-amount">${fmt(r.order, r.unit)}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+  actions.style.display = 'flex';
+  window._lastResult = { n, menuNames, rows };
+}
+
+function saveNote(name) {
+  const v = document.getElementById('note-input').value.trim();
+  if (v) notes[name] = v; else delete notes[name];
+  persist();
+  editingNote = null;
+  refreshDatalist();
+  calc();
+  toast(v ? '제품 메모를 저장했어요' : '메모를 지웠어요');
+}
+
+function copyResult() {
+  const r = window._lastResult;
+  if (!r) return;
+  const lines = [
+    `[발주서] ${new Date().toLocaleDateString('ko-KR')} / ${r.n}명`,
+    `메뉴: ${r.menuNames}`, '',
+    ...r.rows.map(x => {
+      const note = notes[x.name];
+      return `- ${x.name}: ${fmt(x.order, x.unit)}${x.waste ? ` (폐기율 ${x.waste}%)` : ''}${note ? ` [제품: ${note}]` : ''}`;
+    })
+  ];
+  navigator.clipboard.writeText(lines.join('\n'))
+    .then(() => toast('발주서를 복사했어요! 메신저에 붙여넣으세요'))
+    .catch(() => toast('복사에 실패했어요'));
+}
+
+/* ---------- 엑셀 일괄 등록 ---------- */
+function parseBulk(text) {
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  const parsed = new Map(); // 메뉴명 -> { category, ings }
+  const errors = [];
+  lines.forEach((line, idx) => {
+    let cols = (line.includes('\t') ? line.split('\t') : line.split(',')).map(c => c.trim());
+    if (idx === 0 && cols[0].includes('메뉴')) return; // 제목 줄 건너뛰기
+    let name, cat, ing, qty, unit, waste;
+    if (CATS.includes(cols[1])) {
+      [name, cat, ing, qty, unit, waste] = cols;          // 6열: 카테고리 포함
+    } else {
+      [name, ing, qty, unit, waste] = cols; cat = null;   // 5열: 카테고리 생략
+    }
+    qty = parseFloat(qty);
+    if (!name || !ing || !(qty > 0)) {
+      errors.push(`${idx + 1}번째 줄: "${line.slice(0, 40)}" — 메뉴명·재료명·1인량을 확인하세요`);
+      return;
+    }
+    unit = ['g', 'ml', '개'].includes(unit) ? unit : 'g';
+    waste = parseFloat(waste) || 0;
+    if (!parsed.has(name)) parsed.set(name, { category: cat || '기타', ings: [] });
+    if (cat) parsed.get(name).category = cat;
+    parsed.get(name).ings.push({ name: ing, qty, unit, waste });
+  });
+  return { parsed, errors };
+}
+
+function previewBulk() {
+  const text = document.getElementById('bulk-input').value;
+  const box = document.getElementById('bulk-preview');
+  const applyBtn = document.getElementById('bulk-apply-btn');
+  if (!text.trim()) { box.innerHTML = ''; applyBtn.style.display = 'none'; toast('먼저 붙여넣으세요'); return; }
+  const { parsed, errors } = parseBulk(text);
+  if (parsed.size === 0) {
+    box.innerHTML = `<div class="preview-box"><span class="err">읽을 수 있는 줄이 없어요. 예시 형식을 확인해주세요.</span>${errors.length ? '<ul>' + errors.slice(0, 5).map(e => `<li class="err">${esc(e)}</li>`).join('') + '</ul>' : ''}</div>`;
+    applyBtn.style.display = 'none';
+    return;
+  }
+  const dup = [...parsed.keys()].filter(n => menus.some(m => m.name === n));
+  const totalIngs = [...parsed.values()].reduce((s, v) => s + v.ings.length, 0);
+  box.innerHTML = `
+    <div class="preview-box">
+      메뉴 <b>${parsed.size}개</b> · 재료 <b>${totalIngs}줄</b>을 읽었어요.
+      <ul>${[...parsed.entries()].slice(0, 8).map(([n, v]) => `<li>${esc(n)} (${v.category}, 재료 ${v.ings.length}개)</li>`).join('')}${parsed.size > 8 ? `<li>… 외 ${parsed.size - 8}개</li>` : ''}</ul>
+      ${dup.length ? `<p style="margin-top:6px">⚠️ 이미 있는 메뉴 <b>${dup.length}개</b>(${esc(dup.slice(0, 5).join(', '))}${dup.length > 5 ? ' 외' : ''})는 새 내용으로 교체돼요.</p>` : ''}
+      ${errors.length ? `<p class="err" style="margin-top:6px">건너뛴 줄 ${errors.length}개:</p><ul>${errors.slice(0, 5).map(e => `<li class="err">${esc(e)}</li>`).join('')}</ul>` : ''}
+    </div>`;
+  window._bulkParsed = parsed;
+  applyBtn.style.display = 'block';
+}
+
+function applyBulk() {
+  const parsed = window._bulkParsed;
+  if (!parsed) return;
+  let added = 0, updated = 0;
+  parsed.forEach((v, name) => {
+    const existing = menus.find(m => m.name === name);
+    if (existing) { existing.category = v.category; existing.ings = v.ings; updated++; }
+    else { menus.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name, ...v }); added++; }
+  });
+  persist();
+  refreshDatalist();
+  renderMenuManage();
+  document.getElementById('bulk-input').value = '';
+  document.getElementById('bulk-preview').innerHTML = '';
+  document.getElementById('bulk-apply-btn').style.display = 'none';
+  window._bulkParsed = null;
+  toast(`등록 완료! 새 메뉴 ${added}개, 교체 ${updated}개`);
+}
+
+/* ---------- 백업 · 복원 ---------- */
+function exportData() {
+  const data = { app: 'lunch-order-calc', version: 2, exportedAt: new Date().toISOString(), menus, notes };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  const d = new Date();
+  a.download = `급식발주_백업_${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('백업 파일을 내려받았어요. 안전한 곳에 보관하세요!');
+}
+
+function importData(input) {
+  const file = input.files[0];
+  input.value = '';
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      if (data.app !== 'lunch-order-calc' || !Array.isArray(data.menus)) throw new Error('형식이 다른 파일');
+      if (!confirm(`백업 파일에 메뉴 ${data.menus.length}개가 있어요.\n지금 브라우저의 데이터를 이 백업으로 교체할까요?\n(현재 메뉴 ${menus.length}개는 사라집니다)`)) return;
+      menus = data.menus;
+      menus.forEach(m => { if (!m.category) m.category = '기타'; });
+      notes = data.notes || {};
+      selectedIds = new Set();
+      persist();
+      refreshDatalist();
+      renderMenuManage();
+      renderMenuSelect();
+      toast(`복원 완료! 메뉴 ${menus.length}개를 불러왔어요`);
+    } catch {
+      toast('이 앱의 백업 파일이 아니에요. 파일을 확인해주세요');
+    }
+  };
+  reader.readAsText(file);
+}
+
+function wipeAll() {
+  if (!confirm('정말 모든 메뉴와 제품 메모를 삭제할까요?')) return;
+  if (!confirm('백업은 해두셨나요? 삭제하면 되돌릴 수 없어요!')) return;
+  menus = []; notes = {}; selectedIds = new Set();
+  persist();
+  refreshDatalist();
+  renderMenuManage();
+  renderMenuSelect();
+  toast('모든 데이터를 삭제했어요');
+}
+
+/* ---------- 초기화 ---------- */
+document.getElementById('headcount').addEventListener('input', calc);
+document.getElementById('menu-search').addEventListener('input', renderMenuSelect);
+document.getElementById('manage-search').addEventListener('input', renderMenuManage);
+document.getElementById('menu-cat').innerHTML = CATS.map(c => `<option>${c}</option>`).join('');
+
+load();
+if (menus.length === 0) {
+  menus = [{
+    id: 'sample1',
+    name: '(예시) 제육볶음',
+    category: '주찬',
+    ings: [
+      { name: '돼지고기(앞다리)', qty: 70, unit: 'g', waste: 0 },
+      { name: '양파', qty: 20, unit: 'g', waste: 10 },
+      { name: '대파', qty: 5, unit: 'g', waste: 8 },
+      { name: '고추장', qty: 8, unit: 'g', waste: 0 }
+    ]
+  }];
+  persist();
+}
+resetForm();
+refreshDatalist();
+renderMenuManage();
+renderMenuSelect();
+</script>
+</body>
+</html>
