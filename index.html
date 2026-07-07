@@ -167,10 +167,41 @@
 
   .empty { text-align: center; padding: 30px 10px; font-size: 15px; font-weight: 700; color: var(--ink-sub); }
   .hint { font-size: 13px; font-weight: 600; color: var(--ink-sub); margin-top: 8px; }
-  .example-box {
-    background: var(--bg); border-radius: 12px; padding: 12px 14px;
-    font-size: 12.5px; font-weight: 600; color: var(--ink-sub);
-    white-space: pre; overflow-x: auto; margin: 8px 0; line-height: 1.7;
+
+  /* 새 메뉴 등록 폼 위계 */
+  .field-label { font-size: 14.5px; font-weight: 800; color: var(--ink); margin: 14px 0 6px; }
+  .sub-section {
+    background: var(--bg); border-radius: 16px;
+    padding: 16px; margin-top: 18px;
+  }
+  .sub-section input, .sub-section select { background: #fff; }
+  .sub-title { font-size: 16px; font-weight: 800; color: var(--ink); margin-bottom: 10px; }
+  .sub-title-note { font-size: 13px; font-weight: 700; color: var(--ink-sub); margin-left: 6px; }
+  .sub-section .btn-small { background: #fff; border: 1.5px solid var(--line); }
+  .sub-section .ing-head { margin-top: 0; }
+
+  /* 엑셀 예시 표 */
+  .example-wrap { overflow-x: auto; margin: 10px 0 8px; border: 1.5px solid var(--line); border-radius: 12px; }
+  .example-table { width: 100%; border-collapse: collapse; margin: 0; }
+  .example-table th {
+    background: var(--bg); color: var(--ink);
+    font-size: 12.5px; font-weight: 800; padding: 9px 10px;
+    border-bottom: 1.5px solid var(--line); border-radius: 0; text-align: left;
+  }
+  .example-table td {
+    font-size: 13px; font-weight: 700; color: var(--ink-sub);
+    padding: 8px 10px; border-bottom: 1px solid var(--line);
+  }
+  .example-table tr:last-child td { border-bottom: none; }
+
+  /* 전체 초기화 (작게) */
+  .danger-line {
+    text-align: center; font-size: 12.5px; font-weight: 700;
+    color: var(--ink-sub); padding: 6px 0 14px;
+  }
+  .link-danger {
+    border: none; background: none; font-size: 12.5px; font-weight: 800;
+    color: var(--danger); text-decoration: underline; padding: 0;
   }
   .preview-box {
     background: var(--yellow-bg); border-radius: 12px; padding: 14px 16px;
@@ -247,20 +278,22 @@
       <h2 id="form-title">새 메뉴 등록</h2>
       <div class="row">
         <div style="flex:2">
-          <label for="menu-name">메뉴 이름</label>
+          <label class="field-label" for="menu-name">메뉴 이름</label>
           <input type="text" id="menu-name" placeholder="예: 제육볶음">
         </div>
         <div style="flex:1">
-          <label for="menu-cat">카테고리</label>
+          <label class="field-label" for="menu-cat">카테고리</label>
           <select id="menu-cat"></select>
         </div>
       </div>
 
-      <label>재료 (1인분 기준)</label>
-      <div class="ing-head"><span>재료명</span><span>1인 기준량</span><span>단위</span><span>폐기율%</span><span></span></div>
-      <div id="ing-rows"></div>
-      <button class="btn-small" onclick="addIngRow()">＋ 재료 추가</button>
-      <p class="hint">재료명은 입력하면 기존에 쓰던 이름이 추천돼요. <b>같은 재료는 같은 이름</b>으로 써야 발주량이 합산됩니다.<br>폐기율: 껍질·꼭지 등 버리는 비율. 모르면 0으로 두세요.</p>
+      <div class="sub-section">
+        <div class="sub-title">재료 <span class="sub-title-note">1인분 기준으로 입력하세요</span></div>
+        <div class="ing-head"><span>재료명</span><span>1인 기준량</span><span>단위</span><span>폐기율%</span><span></span></div>
+        <div id="ing-rows"></div>
+        <button class="btn-small" onclick="addIngRow()">＋ 재료 추가</button>
+        <p class="hint">재료명은 입력하면 기존에 쓰던 이름이 추천돼요. <b>같은 재료는 같은 이름</b>으로 써야 발주량이 합산됩니다.<br>폐기율: 껍질·꼭지 등 버리는 비율. 모르면 0으로 두세요.</p>
+      </div>
 
       <button class="btn btn-yellow" id="save-btn" onclick="saveMenu()">메뉴 저장</button>
       <button class="btn btn-outline" id="cancel-btn" style="display:none" onclick="resetForm()">수정 취소</button>
@@ -279,10 +312,17 @@
     <div class="card">
       <h2>📋 엑셀로 한 번에 등록</h2>
       <p class="hint" style="margin-top:0">엑셀에서 아래 순서로 표를 만들고, 범위를 복사(Ctrl+C)해서 그대로 붙여넣으세요.<br>같은 메뉴는 재료 수만큼 여러 줄로 씁니다. 이미 있는 메뉴 이름이면 새 내용으로 교체돼요.</p>
-      <div class="example-box">메뉴명	카테고리	재료명	1인량	단위	폐기율
-제육볶음	주찬	돼지고기(앞다리)	70	g	0
-제육볶음	주찬	양파	20	g	10
-미역국	국·탕	건미역	4	g	0</div>
+      <div class="example-wrap">
+        <table class="example-table">
+          <thead><tr><th>메뉴명</th><th>카테고리</th><th>재료명</th><th>1인량</th><th>단위</th><th>폐기율</th></tr></thead>
+          <tbody>
+            <tr><td>제육볶음</td><td>주찬</td><td>돼지고기(앞다리)</td><td>70</td><td>g</td><td>0</td></tr>
+            <tr><td>제육볶음</td><td>주찬</td><td>양파</td><td>20</td><td>g</td><td>10</td></tr>
+            <tr><td>미역국</td><td>국·탕</td><td>건미역</td><td>4</td><td>g</td><td>0</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <button class="btn-small" onclick="copyTemplate()">📄 이 양식 복사하기 (엑셀에 붙여넣어 시작)</button>
       <textarea id="bulk-input" placeholder="여기에 붙여넣으세요 (첫 줄 제목은 있어도 되고 없어도 돼요)"></textarea>
       <button class="btn btn-outline" onclick="previewBulk()">미리보기</button>
       <div id="bulk-preview"></div>
@@ -299,11 +339,7 @@
       <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(this)">
     </div>
 
-    <div class="card">
-      <h2>🗑️ 전체 초기화</h2>
-      <p class="hint" style="margin-top:0">모든 메뉴와 제품 메모를 지웁니다. 지우기 전에 꼭 백업하세요.</p>
-      <button class="btn btn-outline" style="color:var(--danger)" onclick="wipeAll()">모든 데이터 삭제</button>
-    </div>
+    <p class="danger-line">모든 메뉴·메모를 지우려면 <button class="link-danger" onclick="wipeAll()">전체 초기화</button> — 지우기 전에 꼭 백업하세요</p>
   </section>
 
 </main>
@@ -636,6 +672,18 @@ function copyResult() {
 }
 
 /* ---------- 엑셀 일괄 등록 ---------- */
+function copyTemplate() {
+  const tsv = [
+    ['메뉴명', '카테고리', '재료명', '1인량', '단위', '폐기율'],
+    ['제육볶음', '주찬', '돼지고기(앞다리)', '70', 'g', '0'],
+    ['제육볶음', '주찬', '양파', '20', 'g', '10'],
+    ['미역국', '국·탕', '건미역', '4', 'g', '0']
+  ].map(r => r.join('\t')).join('\n');
+  navigator.clipboard.writeText(tsv)
+    .then(() => toast('양식을 복사했어요! 엑셀에 붙여넣고 내용을 바꿔보세요'))
+    .catch(() => toast('복사에 실패했어요'));
+}
+
 function parseBulk(text) {
   const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
   const parsed = new Map(); // 메뉴명 -> { category, ings }
