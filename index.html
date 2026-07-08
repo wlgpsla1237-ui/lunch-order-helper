@@ -71,6 +71,8 @@
     background: #fff; font-family: inherit;
   }
   input:focus, select:focus, textarea:focus { outline: none; border-color: var(--yellow); box-shadow: 0 0 0 3px var(--yellow-bg); }
+  input::placeholder, textarea::placeholder { color: #b0b8c1; font-weight: 600; }
+  input:focus::placeholder, textarea:focus::placeholder { color: transparent; }
   textarea { resize: vertical; min-height: 130px; font-size: 13.5px; line-height: 1.6; }
 
   .row { display: flex; gap: 8px; }
@@ -153,7 +155,11 @@
   th:last-child { border-radius: 0 10px 10px 0; }
   td { padding: 12px 10px; font-size: 15px; font-weight: 600; border-bottom: 1px solid var(--line); vertical-align: top; }
   td .ing-name-cell { font-weight: 800; font-size: 15.5px; }
-  td .waste-tag { font-size: 12px; color: var(--ink-sub); font-weight: 700; }
+  .waste-tag {
+    display: inline-block; font-size: 11.5px; font-weight: 800;
+    color: var(--ink-sub); background: var(--bg);
+    padding: 1px 7px; border-radius: 6px; margin-left: 5px; vertical-align: 1.5px;
+  }
   td.amount { font-weight: 800; font-size: 15.5px; }
   td.order-amount { font-weight: 800; font-size: 16.5px; background: var(--yellow-bg); border-radius: 8px; }
   .note-line { font-size: 13px; font-weight: 700; color: var(--blue); margin-top: 3px; }
@@ -347,6 +353,7 @@
 <datalist id="ing-datalist"></datalist>
 <div class="toast" id="toast"></div>
 
+<script src="seed-data.js"></script>
 <script>
 const STORE_KEY = 'lunchOrderCalc.menus.v1';
 const NOTES_KEY = 'lunchOrderCalc.notes.v1';
@@ -550,8 +557,19 @@ function renderMenuManage() {
   }
   const list = sortedMenus(document.getElementById('manage-search')?.value, manageCat);
   box.innerHTML = list.length
-    ? list.map(m => menuItemHTML(m, { mode: 'manage' })).join('')
+    ? capList(list, 'manage')
     : '<p class="empty">검색 결과가 없어요.</p>';
+}
+
+// 목록이 아주 길면 앞부분만 렌더링 (성능 보호)
+const RENDER_CAP = 300;
+function capList(list, mode) {
+  const shown = list.slice(0, RENDER_CAP);
+  let html = shown.map(m => menuItemHTML(m, { mode })).join('');
+  if (list.length > RENDER_CAP) {
+    html += `<p class="empty">…외 ${(list.length - RENDER_CAP).toLocaleString()}개 더 있어요.<br>검색이나 카테고리로 좁혀보세요.</p>`;
+  }
+  return html;
 }
 
 /* ---------- 발주 계산 ---------- */
@@ -568,7 +586,7 @@ function renderMenuSelect() {
   const rest = sortedMenus(q, calcCat).filter(m => !selectedIds.has(m.id));
   const list = [...picked, ...rest];
   box.innerHTML = list.length
-    ? list.map(m => menuItemHTML(m, { mode: 'select' })).join('')
+    ? capList(list, 'select')
     : '<p class="empty">검색 결과가 없어요.</p>';
   calc();
 }
@@ -612,8 +630,7 @@ function calc() {
   const menuNames = menus.filter(m => selectedIds.has(m.id)).map(m => m.name).join(', ');
   area.innerHTML = `
     <p style="font-size:14px;font-weight:700;color:var(--ink-sub)">
-      ${new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })} ·
-      <b style="color:var(--ink)">${n}명</b> · ${esc(menuNames)}
+      <b style="color:var(--ink)">${n}명 기준</b> · ${esc(menuNames)}
     </p>
     <table>
       <thead><tr><th>재료</th><th>순사용량</th><th>발주량 (폐기율 반영)</th></tr></thead>
@@ -627,12 +644,11 @@ function calc() {
                  <button class="btn-small" onclick="editingNote=null;calc()">취소</button>
                </div>`
             : `${note ? `<div class="note-line">📌 ${esc(note)}</div>` : ''}
-               <button class="note-btn no-print" onclick="editingNote='${esc(r.name)}';calc();document.getElementById('note-input')?.focus()">${note ? '메모 수정' : '+ 제품 메모'}</button>`;
+               <div><button class="note-btn no-print" onclick="editingNote='${esc(r.name)}';calc();document.getElementById('note-input')?.focus()">${note ? '메모 수정' : '+ 제품 메모'}</button></div>`;
           return `
           <tr>
             <td>
-              <span class="ing-name-cell">${esc(r.name)}</span>
-              ${r.waste ? `<div class="waste-tag">폐기율 ${r.waste}%</div>` : ''}
+              <div class="ing-name-cell">${esc(r.name)}${r.waste ? `<span class="waste-tag">폐기율 ${r.waste}%</span>` : ''}</div>
               ${noteHtml}
             </td>
             <td class="amount">${fmt(r.net, r.unit)}</td>
@@ -659,7 +675,7 @@ function copyResult() {
   const r = window._lastResult;
   if (!r) return;
   const lines = [
-    `[발주서] ${new Date().toLocaleDateString('ko-KR')} / ${r.n}명`,
+    `[발주서] ${r.n}명 기준`,
     `메뉴: ${r.menuNames}`, '',
     ...r.rows.map(x => {
       const note = notes[x.name];
@@ -811,6 +827,27 @@ document.getElementById('manage-search').addEventListener('input', renderMenuMan
 document.getElementById('menu-cat').innerHTML = CATS.map(c => `<option>${c}</option>`).join('');
 
 load();
+// 시드 레시피(학교 급식 3년치) 최초 1회 자동 등록 — 이미 등록한 메뉴는 유지
+// seed-data.js가 압축 해제를 마치면 'seed-ready' 이벤트로 호출됨
+function applySeed() {
+  if (!window.SEED) return;
+  if (localStorage.getItem('lunchOrderCalc.seedApplied') === SEED.version) return;
+  const existing = new Set(menus.map(m => m.name));
+  let added = 0;
+  SEED.menus.forEach(([name, cat, ings], i) => {
+    if (existing.has(name)) return;
+    menus.push({ id: 'seed-' + i, name, category: cat, ings: ings.map(([n, q]) => ({ name: n, qty: q, unit: 'g', waste: 0 })) });
+    added++;
+  });
+  localStorage.setItem('lunchOrderCalc.seedApplied', SEED.version);
+  persist();
+  refreshDatalist();
+  renderMenuManage();
+  renderMenuSelect();
+  if (added) setTimeout(() => toast(`급식 레시피 ${added.toLocaleString()}개를 불러왔어요!`), 400);
+}
+applySeed();
+window.addEventListener('seed-ready', applySeed);
 if (menus.length === 0) {
   menus = [{
     id: 'sample1',
