@@ -95,6 +95,12 @@
   }
   .chip.active { background: var(--ink); color: #fff; }
 
+  .reco-chip {
+    background: var(--yellow-bg); color: var(--ink); border: 1.5px solid var(--yellow);
+  }
+  .reco-chip:hover { background: var(--yellow); }
+  .reco-chip .reco-count { font-weight: 700; color: var(--ink-sub); margin-left: 3px; }
+
   .search-box { margin-bottom: 10px; }
 
   .ing-row { display: grid; grid-template-columns: 1.6fr 1fr .8fr .9fr 40px; gap: 6px; margin-bottom: 6px; align-items: center; }
@@ -266,6 +272,12 @@
       <div class="chips" id="calc-chips"></div>
       <input type="search" id="menu-search" class="search-box" placeholder="메뉴·재료 검색 (예: 제육, 돼지고기)">
       <div id="menu-select-list"></div>
+    </div>
+
+    <div class="card" id="reco-card" style="display:none">
+      <h2>🍱 함께 자주 나온 메뉴</h2>
+      <p class="hint" style="margin-top:0">지난 급식 기록을 바탕으로, 선택한 메뉴와 자주 같이 나온 메뉴를 추천해요.</p>
+      <div class="chips" id="reco-list"></div>
     </div>
 
     <div class="card">
@@ -589,11 +601,77 @@ function renderMenuSelect() {
     ? capList(list, 'select')
     : '<p class="empty">검색 결과가 없어요.</p>';
   calc();
+  renderRecommendations();
 }
 
 function toggleSelect(id) {
   selectedIds.has(id) ? selectedIds.delete(id) : selectedIds.add(id);
   renderMenuSelect();
+}
+
+/* ---------- 함께 자주 나온 메뉴 추천 ---------- */
+// SEED.history(과거 급식 조합)에서 메뉴별 동시 출현 빈도를 미리 계산해 캐싱
+function ensureRecoData() {
+  if (window._coOccur) return;
+  window._seedNameIndex = {};
+  SEED.menus.forEach(([name], i) => { window._seedNameIndex[name] = i; });
+  const co = {};
+  (SEED.history || []).forEach(([, , idxs]) => {
+    for (let a = 0; a < idxs.length; a++) {
+      for (let b = 0; b < idxs.length; b++) {
+        if (a === b) continue;
+        const x = idxs[a], y = idxs[b];
+        (co[x] ||= {})[y] = (co[x][y] || 0) + 1;
+      }
+    }
+  });
+  window._coOccur = co;
+}
+
+function renderRecommendations() {
+  const card = document.getElementById('reco-card');
+  const box = document.getElementById('reco-list');
+  if (!card || !box) return;
+  if (!window.SEED || selectedIds.size === 0) { card.style.display = 'none'; return; }
+  ensureRecoData();
+
+  const selectedMenus = menus.filter(m => selectedIds.has(m.id));
+  const selectedNames = new Set(selectedMenus.map(m => m.name));
+  const counts = new Map(); // seed 메뉴 인덱스 -> 동시 출현 횟수 합
+  selectedMenus.forEach(m => {
+    const idx = window._seedNameIndex[m.name];
+    if (idx == null) return;
+    const co = window._coOccur[idx];
+    if (!co) return;
+    Object.entries(co).forEach(([j, cnt]) => {
+      const name = SEED.menus[+j][0];
+      if (selectedNames.has(name)) return;
+      counts.set(+j, (counts.get(+j) || 0) + cnt);
+    });
+  });
+
+  if (counts.size === 0) { card.style.display = 'none'; return; }
+  const top = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
+  card.style.display = 'block';
+  box.innerHTML = top.map(([idx, cnt]) => {
+    const name = SEED.menus[idx][0];
+    return `<button class="chip reco-chip" onclick="addRecommended(${idx})">+ ${esc(name)} <span class="reco-count">${cnt}회</span></button>`;
+  }).join('');
+}
+
+// 추천 메뉴 클릭 시: 이미 등록돼 있으면 그 메뉴를, 없으면(삭제됐던 경우) 시드 레시피로 새로 만들어 선택
+function addRecommended(seedIdx) {
+  const [name, cat, ings] = SEED.menus[seedIdx];
+  let m = menus.find(mm => mm.name === name);
+  if (!m) {
+    m = { id: 'seed-' + seedIdx, name, category: cat, ings: ings.map(([n, q]) => ({ name: n, qty: q, unit: 'g', waste: 0 })) };
+    menus.push(m);
+    persist();
+    refreshDatalist();
+  }
+  selectedIds.add(m.id);
+  renderMenuSelect();
+  toast(`'${name}' 메뉴를 추가했어요`);
 }
 
 function fmt(qty, unit) {
