@@ -267,17 +267,17 @@
       <p class="hint">결식·현장학습 인원을 뺀 실제 식수 인원을 입력하세요.</p>
     </div>
 
+    <div class="card" id="reco-card" style="display:none">
+      <h2>🍱 함께 자주 나온 메뉴</h2>
+      <p class="hint" style="margin-top:0">지난 급식 기록을 바탕으로, 선택한 메뉴와 자주 같이 나온 메뉴를 추천해요.</p>
+      <div class="chips" id="reco-list"></div>
+    </div>
+
     <div class="card">
       <h2>오늘 식단 메뉴 선택</h2>
       <div class="chips" id="calc-chips"></div>
       <input type="search" id="menu-search" class="search-box" placeholder="메뉴·재료 검색 (예: 제육, 돼지고기)">
       <div id="menu-select-list"></div>
-    </div>
-
-    <div class="card" id="reco-card" style="display:none">
-      <h2>🍱 함께 자주 나온 메뉴</h2>
-      <p class="hint" style="margin-top:0">지난 급식 기록을 바탕으로, 선택한 메뉴와 자주 같이 나온 메뉴를 추천해요.</p>
-      <div class="chips" id="reco-list"></div>
     </div>
 
     <div class="card">
@@ -910,10 +910,15 @@ load();
 function applySeed() {
   if (!window.SEED) return;
   if (localStorage.getItem('lunchOrderCalc.seedApplied') === SEED.version) return;
-  const existing = new Set(menus.map(m => m.name));
-  let added = 0;
+  const byName = new Map(menus.map(m => [m.name, m]));
+  let added = 0, fixed = 0;
   SEED.menus.forEach(([name, cat, ings], i) => {
-    if (existing.has(name)) return;
+    const found = byName.get(name);
+    if (found) {
+      // 이미 등록된 시드 메뉴는 재료는 유지하되, 카테고리 분류가 나중에 개선됐을 수 있으니 갱신
+      if (found.id.startsWith('seed-') && found.category !== cat) { found.category = cat; fixed++; }
+      return;
+    }
     menus.push({ id: 'seed-' + i, name, category: cat, ings: ings.map(([n, q]) => ({ name: n, qty: q, unit: 'g', waste: 0 })) });
     added++;
   });
@@ -923,6 +928,7 @@ function applySeed() {
   renderMenuManage();
   renderMenuSelect();
   if (added) setTimeout(() => toast(`급식 레시피 ${added.toLocaleString()}개를 불러왔어요!`), 400);
+  else if (fixed) setTimeout(() => toast(`메뉴 카테고리 ${fixed.toLocaleString()}개를 정리했어요`), 400);
 }
 applySeed();
 window.addEventListener('seed-ready', applySeed);
