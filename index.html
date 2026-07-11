@@ -233,7 +233,7 @@
   .toast.show { opacity: 1; }
 
   @media print {
-    header, .btn, .chips, .search-box, .no-print, .note-btn, .headcount-box input { display: none !important; }
+    header, .btn, .chips, .search-box, .no-print, .note-btn, .headcount-box input, #staff-ratio { display: none !important; }
     body { background: #fff; padding: 0; }
     .card { box-shadow: none; padding: 0; }
     td.order-amount { background: #fff; }
@@ -260,11 +260,18 @@
   <section id="panel-calc" class="panel active">
     <div class="card">
       <div class="headcount-box">
-        <label for="headcount">급식 인원</label>
-        <input type="number" id="headcount" min="1" placeholder="480" inputmode="numeric">
+        <label for="headcount-student">학생 인원</label>
+        <input type="number" id="headcount-student" min="0" placeholder="480" inputmode="numeric">
         <label>명</label>
       </div>
-      <p class="hint">결식·현장학습 인원을 뺀 실제 식수 인원을 입력하세요.</p>
+      <div class="headcount-box" style="margin-top:8px; background:#eef2ff">
+        <label for="headcount-staff">교직원 인원</label>
+        <input type="number" id="headcount-staff" min="0" placeholder="40" inputmode="numeric">
+        <label>명</label>
+      </div>
+      <p class="hint">결식·현장학습 인원을 뺀 실제 식수 인원을 입력하세요.<br>
+        교직원은 학생 대비 <input type="number" id="staff-ratio" min="0.1" step="0.1" value="1.2" style="width:56px; display:inline-block; padding:4px 6px; font-size:13px; font-weight:800; text-align:center; margin:0 2px; vertical-align:middle;">배로 계산해요 (필요하면 학교 기준에 맞게 조정하세요).
+      </p>
     </div>
 
     <div class="card" id="reco-card" style="display:none">
@@ -681,10 +688,14 @@ function fmt(qty, unit) {
 }
 
 function calc() {
-  const n = parseInt(document.getElementById('headcount').value);
+  const student = parseInt(document.getElementById('headcount-student').value) || 0;
+  const staff = parseInt(document.getElementById('headcount-staff').value) || 0;
+  const ratio = parseFloat(document.getElementById('staff-ratio').value) || 1.2;
+  localStorage.setItem('lunchOrderCalc.staffRatio', ratio);
+  const n = student + staff * ratio; // 학생 1인 기준량을 그대로 쓰고, 교직원은 배율만큼 더 얹어서 환산
   const area = document.getElementById('result-area');
   const actions = document.getElementById('result-actions');
-  if (!n || n < 1 || selectedIds.size === 0) {
+  if (n <= 0 || selectedIds.size === 0) {
     area.innerHTML = '<p class="empty">인원을 입력하고 메뉴를 선택하세요.</p>';
     actions.style.display = 'none';
     return;
@@ -706,9 +717,12 @@ function calc() {
   }).sort((a, b) => a.name.localeCompare(b.name, 'ko'));
 
   const menuNames = menus.filter(m => selectedIds.has(m.id)).map(m => m.name).join(', ');
+  const headText = staff > 0
+    ? `학생 ${student}명 + 교직원 ${staff}명(×${ratio}) = ${n % 1 === 0 ? n : n.toFixed(1)}인분`
+    : `${student}명 기준`;
   area.innerHTML = `
     <p style="font-size:14px;font-weight:700;color:var(--ink-sub)">
-      <b style="color:var(--ink)">${n}명 기준</b> · ${esc(menuNames)}
+      <b style="color:var(--ink)">${headText}</b> · ${esc(menuNames)}
     </p>
     <table>
       <thead><tr><th>재료</th><th>순사용량</th><th>발주량 (폐기율 반영)</th></tr></thead>
@@ -736,7 +750,7 @@ function calc() {
       </tbody>
     </table>`;
   actions.style.display = 'flex';
-  window._lastResult = { n, menuNames, rows };
+  window._lastResult = { n, student, staff, ratio, menuNames, rows, headText };
 }
 
 function saveNote(name) {
@@ -753,7 +767,7 @@ function copyResult() {
   const r = window._lastResult;
   if (!r) return;
   const lines = [
-    `[발주서] ${r.n}명 기준`,
+    `[발주서] ${r.headText}`,
     `메뉴: ${r.menuNames}`, '',
     ...r.rows.map(x => {
       const note = notes[x.name];
@@ -899,7 +913,11 @@ function wipeAll() {
 }
 
 /* ---------- 초기화 ---------- */
-document.getElementById('headcount').addEventListener('input', calc);
+document.getElementById('headcount-student').addEventListener('input', calc);
+document.getElementById('headcount-staff').addEventListener('input', calc);
+document.getElementById('staff-ratio').addEventListener('input', calc);
+const savedRatio = localStorage.getItem('lunchOrderCalc.staffRatio');
+if (savedRatio) document.getElementById('staff-ratio').value = savedRatio;
 document.getElementById('menu-search').addEventListener('input', renderMenuSelect);
 document.getElementById('manage-search').addEventListener('input', renderMenuManage);
 document.getElementById('menu-cat').innerHTML = CATS.map(c => `<option>${c}</option>`).join('');
